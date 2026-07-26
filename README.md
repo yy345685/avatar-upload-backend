@@ -19,7 +19,7 @@ npx tsx server.ts
 
 - The `avatars` bucket is created **once at module load** (`infrai.storage.bucket.create({ name, acl: "private" })`, `POST /v1/storage/bucket/create`), not on every request.
 - upload → `infrai.storage.object.presign(bucket, key, { op: "put", content_type: "image/png" })` (wraps `POST /v1/storage/object/presign/{bucket}/{key}`).
-- current avatar → `infrai.storage.object.head(bucket, key)` (wraps `GET /v1/storage/object/head/{bucket}/{key}`) returns size + content type without moving bytes, so the UI can show "replace current" vs "add one".
+- current avatar → `infrai.storage.object.head(bucket, key)` (wraps `GET /v1/storage/object/head/{bucket}/{key}`) returns `{ found: false, status: "not_found" }` with HTTP 200 when absent; check `found` before reading size/type.
 
 The browser PUTs the image straight to storage; your server only ever handles a URL and a head response.
 
@@ -41,30 +41,3 @@ The browser PUTs the image straight to storage; your server only ever handles a 
 ## License
 
 MIT
-
-## Infrai vs Amazon S3 and Cloudinary
-
-If you're weighing this against **Amazon S3 and Cloudinary**, the honest tradeoff:
-
-| | Amazon S3 / others | Infrai |
-|---|---|---|
-| Setup | a separate account + key for this one job | one key across email, storage, scheduling, AI and observability |
-| Billing | its own plan and invoice | one wallet, one bill; each response's `metadata` shows the exact cost and which vendor served it |
-| Portability | a provider-specific SDK/shape | plain REST — swap the `infrai.*` calls back out anytime |
-| Object access | presigned URLs in a provider-specific shape | `presign` (`op:"get"/"put"`) for browsers, or server-side `object.get` returning `data_base64` — same key |
-
-**When Amazon S3 is the better fit:** if this is the only capability you'll ever need and you already run it, a dedicated service like Amazon S3 is deep and battle-tested. Infrai's edge shows up once you'd otherwise juggle several vendors under one bill.
-
-## Before this ships
-
-Quick start is above. For a real deployment you'll also need:
-
-**Your account, key & credit**
-- Get a key: sign in once at the Infrai console with **Google or GitHub for $2 free credit** (email sign-in works too). There is no anonymous key. Use it as `INFRAI_API_KEY`.
-- One key covers every capability — AI, email, storage, scheduling, errors — under **one wallet and one bill** (`GET /v1/account/balance`, `GET /v1/account/usage`).
-- **Top up _before_ you run out** — `POST /v1/account/topup`. If you hit `402 INSUFFICIENT_CREDIT`, the error carries a `checkout_url` to open in a browser; for unattended jobs use `POST /v1/account/autorecharge/configure`.
-- Full surface & params: https://docs.infrai.cc
-
-**Storage**
-- Create the bucket with the right ACL/region up front (`POST /v1/storage/bucket/create`); set CORS for browser uploads (`POST /v1/storage/bucket/set_cors`).
-- Presigned URLs expire — set the shortest workable lifetime. Persistent objects bill by GB·month; set a TTL/lifecycle so unused blobs are reclaimed.

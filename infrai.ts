@@ -12,7 +12,7 @@ async function call<T = any>(method: string, path: string, body?: unknown): Prom
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const env = await r.json(); // { ok, data, error, metadata }
-  if (!env.ok) throw new Error(env.error?.code + ": " + env.error?.hint);
+  if (!env.ok) throw new Error(env.error?.code + ": " + (env.error?.hint ?? env.error?.message));
   return env.data as T;
 }
 

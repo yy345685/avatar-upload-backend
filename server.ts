@@ -24,12 +24,12 @@ app.post("/avatar/upload-url", async (req, res) => {
   });
 
   // head is a cheap existence + size/type probe — no bytes move.
-  const head = await infrai.storage.object.head(BUCKET, key).catch(() => null);
+  const head = await infrai.storage.object.head(BUCKET, key);
 
   // Client PUTs the image to uploadUrl; `current` tells the UI what's already there.
   res.json({
     uploadUrl: put.url,
-    current: head ? { size: head.size_bytes, contentType: head.content_type } : null,
+    current: head.found ? { size: head.size_bytes, contentType: head.content_type } : null,
   });
 });
 
